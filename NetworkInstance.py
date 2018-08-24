@@ -228,6 +228,7 @@ class NetworkInstance(object):
 			if step%spam==0:
 				time.sleep(sleep)
 				if showSpam:
+					print(self.summary)
 					print("    Step {0:>{spc}} loss: {loss}".format(step, loss=loss, spc=spc), end='\n')
 		print("Final loss (step {}, total {}): {}".format(train_steps, c_net.train_step_index, loss))
 		

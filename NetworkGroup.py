@@ -10,6 +10,8 @@ from scipy import signal
 
 import time
 from time import sleep
+#from os import remove as removedir
+import os, re
 
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
@@ -240,3 +242,9 @@ class NetworkGroup(object):
 				print(sess.run(net.layers[l]['biases']))
 				print('weights')
 				print(sess.run(net.layers[l]['weights']))
+
+	def clear_tfevents(self, dir):
+		dir = 'tensorboard_logs/' + dir
+		for f in os.listdir( dir):
+			if re.search('events.out.tfevents.*', f):
+				os.remove(os.path.join(dir, f))
