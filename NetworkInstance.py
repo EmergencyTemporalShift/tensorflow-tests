@@ -9,7 +9,7 @@ import re
 
 class NetworkInstance(object):
 	
-	def __init__(self, session, writer, net_index, init_time, num_inputs, num_outputs, inner_shape, learn_rate=None, use_momentum=None, momentum=None):
+	def __init__(self, session, writer, net_index, init_time, num_inputs, num_outputs, inner_shape, learn_rate=None, optimizer=None, momentum=None, rho=None, beta1=None, beta2=None, epsilon=None):
 		# Maybe I should pass the networkInstance in 
 		self.sess = session
 		self.writer = writer
@@ -27,9 +27,32 @@ class NetworkInstance(object):
 		self.init = {}
 		#self.train
 		self.learn_rate = learn_rate
-		self.use_momentum = use_momentum
+		self.optimizer = optimizer
 		self.momentum = momentum
-		self.setup_net(learn_rate=self.learn_rate, use_momentum=self.use_momentum, momentum=self.momentum)
+		if self.optimizer == 'adadelta':
+			if rho is None:
+				rho = 0.95
+			if epsilon is None:
+				epsilon = 1e-8
+		if self.optimizer == 'adam':
+			if beta1 == None:
+				beta1 = 0.9
+			if beta2 is None:
+				beta2 = 0.999
+			if epsilon is None:
+				epsilon = 1e-8
+		self.rho = rho
+		self.beta1 = beta1
+		self.beta2 = beta2
+		self.epsilon = epsilon
+		if self.optimizer == 'sgd':
+			self.setup_net(learn_rate=self.learn_rate, optimizer=self.optimizer)
+		if self.optimizer == 'momentum':
+			self.setup_net(learn_rate=self.learn_rate, optimizer=self.optimizer, momentum=self.momentum)
+		if self.optimizer == 'adadelta':
+			self.setup_net(learn_rate=self.learn_rate, optimizer=self.optimizer, rho=self.rho, epsilon=self.epsilon)
+		if self.optimizer == 'adam':
+			self.setup_net(learn_rate=self.learn_rate, optimizer=self.optimizer, beta1=self.beta1, beta2=self.beta2, epsilon=self.epsilon)
 
 	def __repr__(self):
 		return("<Network Instance No{}>".format(self.net_index))
@@ -38,7 +61,7 @@ class NetworkInstance(object):
 		print("Network No{}".format(self.net_index))
 		print("Learn rate: {}".format(self.learn_rate))
 		
-		if self.use_momentum:
+		if self.optimizer == 'momentum':
 			print("Uses momentum")
 			print("Momentum: {}".format(self.momentum))
 		else:
@@ -85,13 +108,13 @@ class NetworkInstance(object):
 			elif tmp == len(sizes)-2: # Final layer
 				self.make_layer(idx, self.layers[tmp]['outputs'], sizes[tmp], sizes[idx], isFinal=True)
 	
-	def setup_net(self, learn_rate=1e-1, use_momentum=False, momentum=1e-1):
+	def setup_net(self, learn_rate=1e-1, optimizer='sgd', momentum=1e-1, rho=0.95, beta1=0.9, beta2=0.999, epsilon=1e-8):
 		"""Set up but don't initialize yet"""
 		
 		if learn_rate is None:
 			learn_rate = 1e-1
-		if use_momentum is None:
-			use_momentum = False
+		if optimizer is None:
+			optimizer = 'sgd'
 		if momentum is None:
 			momentum = 1e-1
 			
@@ -105,10 +128,14 @@ class NetworkInstance(object):
 			
 			self.error_tensor = self.error_function(self.outputs, self.desired_outputs)
 			
-			if use_momentum:
+			if optimizer == 'momentum':
 				self.train_step = tf.train.MomentumOptimizer(learn_rate, momentum, name='momentum_train_step').minimize(self.error_tensor)
-			else:
+			elif optimizer == 'sgd':
 				self.train_step = tf.train.GradientDescentOptimizer(learn_rate, name='train_step').minimize(self.error_tensor)
+			elif optimizer == 'adadelta':
+				self.train_step = tf.train.AdadeltaOptimizer(learn_rate, rho=rho, epsilon=epsilon, name='adadelta_train_step').minimize(self.error_tensor)
+			elif optimizer == 'adam':
+				self.train_step = tf.train.AdamOptimizer(learn_rate, beta1=beta1, beta2=beta2, epsilon=epsilon, name='adam_train_step').minimize(self.error_tensor)
 		
 		with tf.variable_scope('network_{}/loss_ops'.format(self.net_index), reuse=tf.AUTO_REUSE):
 			# Honestly might not be needed anymore
@@ -125,9 +152,13 @@ class NetworkInstance(object):
 		# Others is for weights and biases
 		self.init['other'] = tf.variables_initializer(others, name='network_{}_other_init'.format(self.net_index))
 		
-		if self.use_momentum:
+		if self.optimizer == 'momentum':
 			self.init['momentum'] = self.initialize_search('momentum_train_step')
-			
+		elif self.optimizer == 'adadelta':
+			self.init['adadelta'] = self.initialize_search('adadelta_train_step')
+		elif self.optimizer == 'adam':
+			self.init['adam'] = self.initialize_search(['adam_train_step', 'beta'])
+		
 		self.init['defined'] = True
 	
 	
@@ -154,15 +185,17 @@ class NetworkInstance(object):
 				self.train_step_index = 0
 				
 			self.sess.run([self.init['loss'], self.init['other']])
-			if self.use_momentum:
+			if self.optimizer == 'momentum':
 				self.sess.run([self.init['momentum']])
+			elif self.optimizer == 'adadelta':
+				self.sess.run([self.init['adadelta']])
+			elif self.optimizer == 'adam':
+				self.sess.run([self.init['adam']])
 		
 	
 	def increment_train_step(self):
 		train_step_index += 1
-		
-	# Training is taken care of in NetworkGroup, for better or worse
-	
+
 	def train(self, train_steps, training_inputs, training_outputs, spam=None, sleep=0):
 		showSpam = True
 		if spam == 0: # Only show final result
@@ -174,10 +207,10 @@ class NetworkInstance(object):
 		spc = len(str(train_steps))
 		c_net = self
 		sess = self.sess
-		print("Training network #{}".format(self.net_index))
+		print("Training network #{} (type={})".format(self.net_index, self.optimizer))
 
-		run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-		run_metadata = tf.RunMetadata()
+		#run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+		#run_metadata = tf.RunMetadata()
 
 		for step in range(train_steps):
 			c_net.train_step_index += 1
@@ -186,11 +219,11 @@ class NetworkInstance(object):
 								      c_net.loss_assign,
 								      c_net.summary],
 			feed_dict={c_net.inputs: np.array(training_inputs),
-			  c_net.desired_outputs: np.array(training_outputs)},
-			options=run_options, run_metadata=run_metadata)
+			  c_net.desired_outputs: np.array(training_outputs)})
+			#options=run_options, run_metadata=run_metadata)
 			
 			self.writer.add_summary(s, global_step=c_net.train_step_index)
-			self.writer.add_run_metadata(run_metadata, "network_{}_run_{}".format(self.net_index, c_net.train_step_index), global_step=c_net.train_step_index)
+			#self.writer.add_run_metadata(run_metadata, "network_{}_run_{}".format(self.net_index, c_net.train_step_index), global_step=c_net.train_step_index)
 			
 			if step%spam==0:
 				time.sleep(sleep)
@@ -239,7 +272,7 @@ class NetworkInstance(object):
 						# Check it's in the correct net
 						if (bool(re.search(bytes('^network_{}'.format(self.net_index), 'ASCII'), name))):
 							# Check the name is correct
-							if bool(re.search(bytes('{}$'.format(search_string), 'ASCII'), name)):
+							if bool(re.search(bytes('{}.*$'.format(search_string), 'ASCII'), name)):
 								if debug_variables:
 									print("{} matches '{}' pattern".format(name.decode('ASCII'), search_string))
 								variables[string_index].append(v)

@@ -45,7 +45,7 @@ elif sys.argv[1] == 'autoencoder':
 else:
 	mode = 'nothing'
 	
-mode = 'autoencoder' # Hack! args aren't working with ptpython
+mode = 'general' # Hack! args aren't working with ptpython
 
 if mode != 'nothing':
 	print("Running {}".format(mode))
@@ -56,6 +56,10 @@ if mode == 'momentum':
 	n = ng.NetworkGroup('momentum', 2, 1, 1, mode='momentum')
 elif mode == 'autoencoder':
 	n = ng.NetworkGroup('autoencoder', 1, 5, 5, mode='autoencoder')
+elif mode == 'adadelta':
+	n = ng.NetworkGroup('adadelta', 4, 1, 1, mode='adadelta')
+elif mode == 'general':
+	n = ng.NetworkGroup('general', 5, 1, 1, mode='general')
 else:
 	n = None
 

@@ -49,16 +49,28 @@ class NetworkGroup(object):
 		
 
 		
-		if mode == "momentum": # This broke somehow, don't know when
+		if mode == 'momentum': # This broke somehow, don't know when
 			self.train_group = 0
 			self.assign_puts()
 			
 			self.init_momentumtest() # Momentum is broken
 		
-		if mode == "autoencoder":
+		if mode == 'autoencoder':
 			self.random_some_ident(2)
-			self.init_autoencoder([10,10,1,10,10]) # The outer bits determine the acuricy I think
+			self.init_autoencoder([10,10,2,10,10]) # The outer bits determine the acuricy I think
 		
+		if mode == 'adadelta':
+			self.train_group = 0
+			self.assign_puts()
+			
+			self.init_adadeltatest()
+			
+		if mode == 'general':
+			self.train_group = 0
+			self.assign_puts()
+			
+			self.init_generaltest()
+			
 		self.init_nets()
 		
 		print("NetworkGroup Initialized")
@@ -68,14 +80,27 @@ class NetworkGroup(object):
 			net.initialize()
 		
 	def init_autoencoder(self, mid_size):
-		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, mid_size, learn_rate=1e-2, use_momentum=True, momentum=1e-2)
+		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, mid_size, learn_rate=1e-2, optimizer='adadelta', momentum=1e-2)
 		
 		
 	def init_momentumtest(self):
-		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, use_momentum=False, momentum=None)
-		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, use_momentum=True, momentum=0.1)
-		self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, use_momentum=True, momentum=0.5)
-		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, use_momentum=True, momentum=0.9)
+		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd', momentum=None)
+		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.1)
+		self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.5)
+		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.9)
+	
+	def init_adadeltatest(self):
+		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd')
+		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=0.5e-1, optimizer='adadelta', rho=0.970, epsilon=1.0e-4)
+		self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adadelta', rho=0.970, epsilon=1.0e-4)
+		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1.5e-1, optimizer='adadelta', rho=0.970, epsilon=1.0e-4)
+	
+	def init_generaltest(self):
+		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd')
+		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.9)
+		self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adadelta', rho=0.970, epsilon=1.0e-4)
+		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adam', beta1=0.9, beta2=0.999, epsilon=1.0e-4)
+		self.nets[5] = ni.NetworkInstance(self.sess, self.writer, 5, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adam', beta1=0.9, beta2=0.999, epsilon=1.0e-8)
 	
 	def update_tensorboard(self):
 		# Write down all the data for tensorboard to read
