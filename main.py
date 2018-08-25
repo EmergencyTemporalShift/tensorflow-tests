@@ -66,7 +66,7 @@ else:
 if n:
 	n.update_tensorboard()
 	print("tensorboard" + " --logdir=./tensorboard_logs/" + str(mode))
-	n.train_all(10000)
+	n.train_all(1000)
 	n.update_tensorboard()
 
 # run

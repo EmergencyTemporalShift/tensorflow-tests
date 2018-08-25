@@ -42,7 +42,7 @@ class NetworkGroup(object):
 		self.num_outputs = num_outputs
 				
 		self.current_net = 1 # I'm indexing my list of nets from 1 on purpose
-		self.init_time = time.time() # Keeps tensorboard scalar plots from running on top of one another
+		self.init_time = 11535156313 - time.time() # Keeps tensorboard scalar plots from running on top of one another
 		
 		self.writer = None
 		self.summaries = None
@@ -99,10 +99,12 @@ class NetworkGroup(object):
 	
 	def init_generaltest(self):
 		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd')
-		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.9)
-		self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adadelta', rho=0.970, epsilon=1.0e-4)
-		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adam', beta1=0.9, beta2=0.999, epsilon=1.0e-4)
-		self.nets[5] = ni.NetworkInstance(self.sess, self.writer, 5, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adam', beta1=0.9, beta2=0.999, epsilon=1.0e-8)
+		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd', momentum=0.9)
+		#self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adadelta', rho=0.970, epsilon=1.0e-4)
+		self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adam', beta1=0.9, beta2=0.999, epsilon=1.0e-4)
+		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.9, beta1=0.9, beta2=0.999, epsilon=1.0e-4)
+		self.nets[5] = ni.NetworkInstance(self.sess, self.writer, 5, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adadelta', momentum=0.9, rho=0.97, beta1=0.9, beta2=0.999, epsilon=1.0e-8)
+		# If the last net is sgd, momentum, or adadelta, I get all the graphs, but with adam it doesn't
 	
 	def update_tensorboard(self):
 		# Write down all the data for tensorboard to read

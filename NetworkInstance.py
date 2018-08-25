@@ -58,14 +58,22 @@ class NetworkInstance(object):
 		return("<Network Instance No{}>".format(self.net_index))
 	
 	def netinfo(self):
-		print("Network No{}".format(self.net_index))
+		print("Network {}".format(self.net_index))
+		print("Network Optimizer: {}".format(self.optimizer))
 		print("Learn rate: {}".format(self.learn_rate))
 		
 		if self.optimizer == 'momentum':
 			print("Uses momentum")
 			print("Momentum: {}".format(self.momentum))
-		else:
-			print("Doesn't use momentum")
+		#else:
+			#print("Doesn't use momentum")
+		if self.optimizer == 'adadelta':
+			print("rho: {}".format(self.rho))
+			print("epsilon: {}".format(self.epsilon))
+		if self.optimizer == 'adam':
+			print("beta1: {}".format(self.beta1))
+			print("beta2: {}".format(self.beta2))
+			print("epsilon: {}".format(self.epsilon))
 		print()
 		
 	
@@ -128,10 +136,10 @@ class NetworkInstance(object):
 			
 			self.error_tensor = self.error_function(self.outputs, self.desired_outputs)
 			
-			if optimizer == 'momentum':
-				self.train_step = tf.train.MomentumOptimizer(learn_rate, momentum, name='momentum_train_step').minimize(self.error_tensor)
-			elif optimizer == 'sgd':
+			if optimizer == 'sgd':
 				self.train_step = tf.train.GradientDescentOptimizer(learn_rate, name='train_step').minimize(self.error_tensor)
+			elif optimizer == 'momentum':
+				self.train_step = tf.train.MomentumOptimizer(learn_rate, momentum, name='momentum_train_step').minimize(self.error_tensor)
 			elif optimizer == 'adadelta':
 				self.train_step = tf.train.AdadeltaOptimizer(learn_rate, rho=rho, epsilon=epsilon, name='adadelta_train_step').minimize(self.error_tensor)
 			elif optimizer == 'adam':
@@ -228,7 +236,7 @@ class NetworkInstance(object):
 			if step%spam==0:
 				time.sleep(sleep)
 				if showSpam:
-					print(self.summary)
+					#print(self.summary)
 					print("    Step {0:>{spc}} loss: {loss}".format(step, loss=loss, spc=spc), end='\n')
 		print("Final loss (step {}, total {}): {}".format(train_steps, c_net.train_step_index, loss))
 		
