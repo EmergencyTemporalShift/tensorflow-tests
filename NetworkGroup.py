@@ -28,7 +28,7 @@ class NetworkGroup(object):
 	
 	def __init__(self, log_dir, total_nets, num_inputs, num_outputs, mode=None):
 		tf.reset_default_graph()
-		self.sess = tf.Session()
+		self.sess = tf.InteractiveSession()
 		
 		# This stuff is for debugging
 		#self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
@@ -99,12 +99,13 @@ class NetworkGroup(object):
 	
 	def init_generaltest(self):
 		self.nets[1] = ni.NetworkInstance(self.sess, self.writer, 1, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd')
-		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd', momentum=0.9)
+		self.nets[2] = ni.NetworkInstance(self.sess, self.writer, 2, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.9)
 		#self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adadelta', rho=0.970, epsilon=1.0e-4)
 		self.nets[3] = ni.NetworkInstance(self.sess, self.writer, 3, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adam', beta1=0.9, beta2=0.999, epsilon=1.0e-4)
-		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='momentum', momentum=0.9, beta1=0.9, beta2=0.999, epsilon=1.0e-4)
-		self.nets[5] = ni.NetworkInstance(self.sess, self.writer, 5, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adadelta', momentum=0.9, rho=0.97, beta1=0.9, beta2=0.999, epsilon=1.0e-8)
+		self.nets[4] = ni.NetworkInstance(self.sess, self.writer, 4, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='adam', beta1=0.9, beta2=0.999, epsilon=1.0e-4)
+		self.nets[5] = ni.NetworkInstance(self.sess, self.writer, 5, self.init_time, self.num_inputs, self.num_outputs, [4, 4], learn_rate=1e-1, optimizer='sgd', momentum=0.9, rho=0.97, beta1=0.9, beta2=0.999, epsilon=1.0e-8)
 		# If the last net is sgd, momentum, or adadelta, I get all the graphs, but with adam it doesn't
+		# Nope, it's even more complicated
 	
 	def update_tensorboard(self):
 		# Write down all the data for tensorboard to read

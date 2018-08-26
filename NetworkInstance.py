@@ -94,7 +94,7 @@ class NetworkInstance(object):
 	
 	def make_layer(self, layer_index, inputs, a, b, isFinal=False):
 		with tf.variable_scope("layer_{}".format(layer_index), reuse=tf.AUTO_REUSE):
-			self.layers[layer_index] = {} # Initializes a dictionary
+			self.layers[layer_index] = {} # Initializes a layer dictionary
 			
 			layer = self.layers[layer_index] # Makes a shortcut
 			
@@ -119,10 +119,10 @@ class NetworkInstance(object):
 	def setup_net(self, learn_rate=1e-1, optimizer='sgd', momentum=1e-1, rho=0.95, beta1=0.9, beta2=0.999, epsilon=1e-8):
 		"""Set up but don't initialize yet"""
 		
-		if learn_rate is None:
-			learn_rate = 1e-1
 		if optimizer is None:
 			optimizer = 'sgd'
+		if learn_rate is None:
+			learn_rate = 1e-1
 		if momentum is None:
 			momentum = 1e-1
 			
@@ -155,10 +155,10 @@ class NetworkInstance(object):
 		with self.sess.as_default():
 			self.summary = tf.summary.scalar('run_{}/network_{}/loss'.format(self.init_time, self.net_index), self.error_tensor)
 	
-	def setup_init(self, others):
+	def setup_init(self, weightbias):
 		self.init['loss']  = tf.variables_initializer([self.loss])
 		# Others is for weights and biases
-		self.init['other'] = tf.variables_initializer(others, name='network_{}_other_init'.format(self.net_index))
+		self.init['weightbias'] = tf.variables_initializer(weightbias, name='network_{}_weightbias_init'.format(self.net_index))
 		
 		if self.optimizer == 'momentum':
 			self.init['momentum'] = self.initialize_search('momentum_train_step')
@@ -172,27 +172,24 @@ class NetworkInstance(object):
 	
 	def initialize(self, debug_other=False):
 		print("Initializing net {}".format(self.net_index))
-		variables = []
+		weightbias = []
 		
 		for i in range(len(self.shape)-1):
-			variables.append(self.layers[i+1]['weights'])
-			variables.append(self.layers[i+1]['biases'])
+			weightbias.append(self.layers[i+1]['weights'])
+			weightbias.append(self.layers[i+1]['biases'])
 		
 		if debug_other:
 			print("Variables:")
-			for v in variables:
+			for v in weightbias:
 				print(v)
 				
 		with tf.variable_scope('network_{}/init'.format(self.net_index), reuse=tf.AUTO_REUSE):
-			for layer_index in range(1, 3):
-				weight = self.layers[layer_index]['weights']
-				bias   = self.layers[layer_index]['biases']
 				
 			if not self.init['defined']:
-				self.setup_init(variables)
+				self.setup_init(weightbias)
 				self.train_step_index = 0
 				
-			self.sess.run([self.init['loss'], self.init['other']])
+			self.sess.run([self.init['loss'], self.init['weightbias']])
 			if self.optimizer == 'momentum':
 				self.sess.run([self.init['momentum']])
 			elif self.optimizer == 'adadelta':
@@ -262,9 +259,10 @@ class NetworkInstance(object):
 		#print("Final loss: {}".format(t_loss))
 		
 	def initialize_search(self, search_string_list, debug_variables=False):
+		# Note, this adds stupid extra edges connecting all the networks because it searches all of them
 		if type(search_string_list) is str:
 			search_string_list = [search_string_list]
-		assert type(search_string_list) is list, "search_string_list is not a list"
+		assert type(search_string_list) is list, "input needs to be a string or list of strings"
 		variables = {}
 		var_inits = []
 		global_vars = tf.global_variables()
@@ -280,20 +278,20 @@ class NetworkInstance(object):
 					if name in uninitialized_list:
 						# Check it's in the correct net
 						if (bool(re.search(bytes('^network_{}'.format(self.net_index), 'ASCII'), name))):
-							# Check the name is correct
+							# Check the name is correct. Also has a wildcard ending to match suffixes
 							if bool(re.search(bytes('{}.*$'.format(search_string), 'ASCII'), name)):
 								if debug_variables:
 									print("{} matches '{}' pattern".format(name.decode('ASCII'), search_string))
 								variables[string_index].append(v)
 							else:
-								pass
-								#print('{} does not match \'{}\' pattern'.format(name.decode('ASCII'), search_string))
+								if debug_variables:
+									print("{} does not match '{}' pattern".format(name.decode('ASCII'), search_string))
 						else:
-							pass
-							#print('{} is not in net {}'.format(name.decode('ASCII'), net_index))
+							if debug_variables:
+								print("{} is not in net {}".format(name.decode('ASCII'), net_index))
 					else:
-						pass
-						#print(name.decode('ASCII') + ' is already initialized')
+						if debug_variables:
+							print(name.decode('ASCII') + " is already initialized")
 				if debug_variables:
 					print("Variables: " + str(variables))
 				var_inits.append(tf.variables_initializer(variables[string_index], name=search_string + '_init'))
